@@ -1,0 +1,190 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Template to create infraestructure of network, vpc, subnet and domain."
+Parameters:
+  Contexto:
+    Type: String
+    Default: millennium-falcon
+  CIDRRange:
+    Type: String
+    Default: 12.0.0.0/20
+  PrivateSubnetAZ1:
+    Type: String
+    Default: 12.0.0.0/25
+  PrivateSubnetAZ2:
+    Type: String
+    Default: 12.0.1.0/25
+  PublicSubnetAZ1:
+    Type: String
+    Default: 12.0.2.0/26
+  PublicSubnetAZ2:
+    Type: String
+    Default: 12.0.2.128/26
+  DefaultRegion:
+    Description: Default region to create all resources
+    Type: String
+    Default: us-east-1
+  SubnetTemplateURL:
+    Default: https://s3.amazonaws.com/millennium-falcon-bucket/SubnetStack.yml
+    Type: String
+  MultiZoneDeploy:
+    Type: String
+    Default: true
+    AllowedValues:
+    - true
+    - false
+  Prefix:
+    Type: String
+    Default: dev
+    AllowedValues:
+    - dev
+    - hml
+    - prd
+  UsePrefix:
+    Type: String
+    Default: true
+    AllowedValues:
+    - true
+    - false
+
+Conditions: 
+  CanUsePrefix: !Equals [ !Ref UsePrefix, 'true' ]  
+
+Resources:
+
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref CIDRRange
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+      - Key: Name
+        Value: !Join ['-',[!Ref Prefix, !Ref Contexto, "vpc"]]
+
+  IGWBase:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+      - Key: Name
+        Value: !Join ['-',[!Ref Prefix, !Ref Contexto, "igw"]]
+
+  VGAIGWBase:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId:
+        !Ref IGWBase
+      VpcId:
+        !Ref VPC
+
+  TopicNotificationStack:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: !Join ['-',[!Ref Prefix, "topicMonitor"]]
+      TopicName: !Join ['-',[!Ref Prefix, "topicMonitor"]]
+
+  publicStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: ['VPC', 'IGWBase', 'VGAIGWBase', 'TopicNotificationStack']
+    Properties:
+      NotificationARNs:
+      - !Ref TopicNotificationStack
+      Parameters:
+        SubnetAZ1Block: !Ref PublicSubnetAZ1
+        SubnetAZ2Block: !Ref PublicSubnetAZ2
+        DefaultRegion: !Ref DefaultRegion
+        VpcId: !Ref VPC
+        NomeDoContexto: !Join ['-',[!Ref Prefix, !Ref Contexto, "public"]]
+        MultiZoneDeploy: !Ref MultiZoneDeploy
+        IsPublicSubnet: true
+        PublicSubnetID: none
+        InternetGatewayId: !Ref IGWBase
+        Prefix: !Ref Prefix
+        UsePrefix: !Ref UsePrefix
+      TemplateURL: !Ref SubnetTemplateURL
+
+  privateStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: ['VPC', 'IGWBase', 'VGAIGWBase', 'TopicNotificationStack', 'publicStack']
+    Properties:
+      NotificationARNs:
+      - !Ref TopicNotificationStack
+      Parameters:
+        SubnetAZ1Block: !Ref PrivateSubnetAZ1
+        SubnetAZ2Block: !Ref PrivateSubnetAZ2
+        DefaultRegion: !Ref DefaultRegion
+        VpcId: !Ref VPC
+        NomeDoContexto: !Join ['-',[!Ref Prefix, !Ref Contexto, "private"]]
+        MultiZoneDeploy: !Ref MultiZoneDeploy
+        IsPublicSubnet: false
+        PublicSubnetID: !Join ['-',[!Ref Prefix, !Ref Contexto, "public", "subnetAZ1"]]
+        InternetGatewayId: !Ref IGWBase
+        Prefix: !Ref Prefix
+        UsePrefix: !Ref UsePrefix
+      TemplateURL: !Ref SubnetTemplateURL
+
+  PrivateSG:
+    Type: AWS::EC2::SecurityGroup
+    DependsOn: [VPC]
+    Properties: 
+      GroupName: !Join ['-',[!Ref Prefix, "privateSG"]]
+      GroupDescription: Security group that control allowed ports
+      SecurityGroupIngress: 
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !GetAtt VPC.CidrBlock
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !GetAtt VPC.CidrBlock
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !GetAtt VPC.CidrBlock
+      VpcId: !Ref VPC
+
+  PublicSG:
+    Type: AWS::EC2::SecurityGroup
+    DependsOn: [VPC]
+    Properties: 
+      GroupName: !Join ['-',[!Ref Prefix, "publicSG"]]
+      GroupDescription: Security group that control allowed ports
+      SecurityGroupIngress: 
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !GetAtt VPC.CidrBlock
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !GetAtt VPC.CidrBlock
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !GetAtt VPC.CidrBlock
+      VpcId: !Ref VPC
+
+Outputs:
+  PrivateSG:
+    Value: !Ref PrivateSG
+    Export:
+      Name: !Join ['-',[!Ref Prefix, 'privateSG']]
+  PublicSG:
+    Value: !Ref PublicSG
+    Export:
+      Name: !Join ['-',[!Ref Prefix, 'publicSG']]
+  VpcId:
+    Value:
+      !Ref VPC
+    Export:
+      Name: !Join ['-',[!Ref Prefix, 'vpcId']]
+  CIDRRange:
+    Value:
+      !GetAtt VPC.CidrBlock
+    Export:
+      Name: CIDRRange
+  TopicNotificationStack:
+    Value:
+      !Ref TopicNotificationStack
+    Export:
+      Name: !Join ['-',[!Ref Prefix, 'topicNotificationStack']]
