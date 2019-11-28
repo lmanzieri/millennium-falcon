@@ -24,7 +24,7 @@ Parameters:
     Type: String
     Default: us-east-1
   SubnetTemplateURL:
-    Default: https://s3.amazonaws.com/millennium-falcon-bucket/SubnetStack.yml
+    Default: https://s3.amazonaws.com/millennium-falcon-s3/SubnetStack.yml
     Type: String
   MultiZoneDeploy:
     Type: String
@@ -182,7 +182,7 @@ Outputs:
     Value:
       !GetAtt VPC.CidrBlock
     Export:
-      Name: CIDRRange
+      Name: !Join ['-',[!Ref Prefix, 'CIDRRange']]
   TopicNotificationStack:
     Value:
       !Ref TopicNotificationStack

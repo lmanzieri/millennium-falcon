@@ -13,15 +13,15 @@ Validate CF Templates
 
 Create a bucket of CF Templates
 
-` $ aws s3 mb s3://millennium-falcon-bucket/ --region us-east-1 `
+` $ aws s3 mb s3://millennium-falcon-s3/ --region us-east-1 `
 
 Sync the git repo to bucket of CF Templates
 
-` $ aws s3 sync . s3://millennium-falcon-bucket/ --region us-east-1 `
+` $ aws s3 sync ./cf-infra-stack/ s3://millennium-falcon-s3/ --region us-east-1 `
 
 Deploy CF Stack
 
-` $ aws cloudformation deploy --region us-east-1 --stack-name millennium-falcon-stack --template-file MainStack.yml --capabilities CAPABILITY_NAMED_IAM`
+` $ aws cloudformation deploy --region us-east-1 --stack-name millennium-falcon-stack --template-file ./cf-infra-stack/MainStack.yml --capabilities CAPABILITY_NAMED_IAM `
 
 Delete CF Stack
 

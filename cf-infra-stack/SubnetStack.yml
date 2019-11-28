@@ -2,7 +2,7 @@ AWSTemplateFormatVersion: "2010-09-09"
 Description: "Template for combining all templates into one nested template for testing.sss"
 Parameters:
   NatGatewayTemplateURL:
-    Default: https://s3.amazonaws.com/ativa-cf-templates/NatGatewayStack.yml
+    Default: https://s3.amazonaws.com/millennium-falcon-s3/NatGatewayStack.yml
     Type: String
   SubnetAZ1Block:
     Type: String
