@@ -30,7 +30,7 @@ Sync the git repo to bucket of CF Templates
 
 Deploy CF Stack
 
-` $ aws cloudformation deploy --region us-east-1 --stack-name millennium-falcon-stack --template-file ./cf-infra-stack/MainStack.yml --capabilities CAPABILITY_NAMED_IAM `
+` $ aws cloudformation deploy --region us-east-1 --stack-name millennium-falcon-stack --template-file ./cf-infra-stack/MainStack.yml --capabilities CAPABILITY_NAMED_IAM --parameter-overrides KeyName=$Key`
 
 Delete CF Stack
 
