@@ -1,6 +1,15 @@
 # millennium-falcon
 Zup challenge
 
+- Criar um cluster de Kubernetes gerenciado, preferencialmente na AWS, podendo utilizar o ambiente de free tier para não gerar custos extras ao candidato.
+
+- Realizar o build e deploy neste cluster de Kubernetes de uma aplicação qualquer através de uma plataforma de CI/CD.
+
+- Externalizar essa aplicação para o mundo externo usando Ingress ou outro proxy que o candidato conheça, para ser acessada via HTTP.
+
+- É necessário que o candidato automatize a criação do cluster de Kubernetes, bem como regras de firewall, e outras dependências da solução utilizando Terraform ou qualquer outra forma de automação que conheça.
+
+
 ## Pre Req
 
 Validate CF Templates

@@ -32,7 +32,7 @@ Resources:
         Fn::GetAtt:
         - NatEIP
         - AllocationId
-      SubnetId: !ImportValue publicSubnetId
+      SubnetId: !ImportValue publicSubnetIdAZ1
 
   NatRoute:
     Type: AWS::EC2::Route

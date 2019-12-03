@@ -7,10 +7,21 @@ Parameters:
     Default: millennium-falcon
   PrivateSG:
     Type: String
-  PrivateSubnetAZ1:
+  KeyName:
     Type: String
-  PrivateSubnetAZ2:
+  # NodeImageId:
+  #   Type: String
+  #   Default: ami-0b2ae3c6bda8b5c06
+  NodeInstanceType:
     Type: String
+    Default: t3.micro
+  # NodeGroupName:
+  #   Type: String
+  #   Default: millennium-falcon-group
+  # BootstrapArguments:
+  #   Type: String
+  #   Default: '-'
+  
 
 Resources:
 
@@ -34,14 +45,139 @@ Resources:
     Type: AWS::EKS::Cluster
     Properties:
       Name: !Ref Contexto
-      RoleArn: !Ref eksServiceRole
+      RoleArn: !GetAtt eksServiceRole.Arn
       ResourcesVpcConfig:
         SecurityGroupIds:
         - !Ref PrivateSG
         SubnetIds:
-        - !Ref PrivateSubnetAZ1
-        - !Ref PrivateSubnetAZ2
-         
+        - !ImportValue millennium-falcon-private-subnetAZ1
+        - !ImportValue millennium-falcon-private-subnetAZ2
+        - !ImportValue millennium-falcon-public-subnetAZ1
+        - !ImportValue millennium-falcon-public-subnetAZ2
+
+  eksNodeInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - ec2.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+
+  eksNodegroup:
+    Type: AWS::EKS::Nodegroup
+    DependsOn: ['eksNodeInstanceRole', 'eksServiceCluster', 'eksServiceRole']
+    Properties:
+      ClusterName: !Ref Contexto
+      NodeRole: !GetAtt eksNodeInstanceRole.Arn
+      InstanceTypes: 
+      - !Ref NodeInstanceType
+      RemoteAccess:
+        Ec2SshKey: !Ref KeyName
+        SourceSecurityGroups:
+        - !Ref PrivateSG
+      ScalingConfig:
+        MinSize: 1
+        DesiredSize: 2
+        MaxSize: 3
+      Labels:
+        Key1: Name
+        Key2: !Join ['-',[!Ref Contexto, "nodegroup"]]
+      Subnets:
+        - !ImportValue millennium-falcon-private-subnetAZ1
+        - !ImportValue millennium-falcon-private-subnetAZ2
+        - !ImportValue millennium-falcon-public-subnetAZ1
+        - !ImportValue millennium-falcon-public-subnetAZ2
+  
+  # EksNodeInstanceProfile:
+  #   Type: AWS::IAM::InstanceProfile
+  #   Properties:
+  #     Path: "/"
+  #     Roles:
+  #     - !Ref EksNodeInstanceRole
+
+  # NodeLaunchConfig:
+  #   Type: AWS::AutoScaling::LaunchConfiguration
+  #   Properties:
+  #     AssociatePublicIpAddress: 'true'
+  #     IamInstanceProfile: !Ref EksNodeInstanceProfile
+  #     ImageId: !Ref NodeImageId
+  #     InstanceType: !Ref NodeInstanceType
+  #     KeyName: !Ref KeyName
+  #     SecurityGroups:
+  #     - !Ref PrivateSG
+  #     BlockDeviceMappings:
+  #       - DeviceName: /dev/xvda
+  #         Ebs:
+  #           VolumeSize: 30
+  #           VolumeType: gp2
+  #           DeleteOnTermination: true
+  #     UserData:
+  #       Fn::Base64:
+  #         !Sub |
+  #           #!/bin/bash
+  #           set -o xtrace
+  #           /etc/eks/bootstrap.sh ${Contexto} ${BootstrapArguments}
+  #           /opt/aws/bin/cfn-signal --exit-code $? \
+  #                    --stack  ${AWS::StackName} \
+  #                    --resource NodeGroup  \
+  #                    --region ${AWS::Region}
+    
+  # NodeGroup:
+  #   Type: AWS::AutoScaling::AutoScalingGroup
+  #   Properties:
+  #     DesiredCapacity: 3
+  #     LaunchConfigurationName: !Ref NodeLaunchConfig
+  #     MinSize: 1
+  #     MaxSize: 3
+  #     VPCZoneIdentifier: [!ImportValue millennium-falcon-private-subnetAZ1, !ImportValue millennium-falcon-private-subnetAZ2]
+  #     Tags:
+  #     - Key: Name
+  #       Value: !Sub "${Contexto}-${NodeGroupName}-Node"
+  #       PropagateAtLaunch: 'true'
+  #     - Key: !Sub 'kubernetes.io/cluster/${Contexto}'
+  #       Value: 'owned'
+  #       PropagateAtLaunch: 'true'
+  #   UpdatePolicy:
+  #     AutoScalingRollingUpdate:
+  #       MinInstancesInService: '1'
+  #       MaxBatchSize: '1'
+
+  # NodeLaunchConfig:
+  #   Type: AWS::AutoScaling::LaunchConfiguration
+  #   Properties:
+  #     AssociatePublicIpAddress: 'true'
+  #     IamInstanceProfile: !Ref EksNodeInstanceProfile
+  #     ImageId: !Ref NodeImageId
+  #     InstanceType: !Ref NodeInstanceType
+  #     KeyName: !Ref KeyName
+  #     SecurityGroups:
+  #     - !Ref PrivateSG
+  #     BlockDeviceMappings:
+  #       - DeviceName: /dev/xvda
+  #         Ebs:
+  #           VolumeSize: 30
+  #           VolumeType: gp2
+  #           DeleteOnTermination: true
+  #     UserData:
+  #       Fn::Base64:
+  #         !Sub |
+  #           #!/bin/bash
+  #           set -o xtrace
+  #           /etc/eks/bootstrap.sh ${Contexto} ${BootstrapArguments}
+  #           /opt/aws/bin/cfn-signal --exit-code $? \
+  #                    --stack  ${AWS::StackName} \
+  #                    --resource NodeGroup  \
+  #                    --region ${AWS::Region}       
 
 Outputs:
 

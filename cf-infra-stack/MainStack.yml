@@ -20,12 +20,16 @@ Parameters:
     Type: String
     Default: 12.0.2.128/26
   DefaultRegion:
-    Description: Default region to create all resources
     Type: String
     Default: us-east-1
   SubnetTemplateURL:
     Default: https://s3.amazonaws.com/millennium-falcon-s3/SubnetStack.yml
     Type: String
+  EksTemplateURL:
+    Default: https://s3.amazonaws.com/millennium-falcon-s3/EksServiceStack.yml
+    Type: String
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
   MultiZoneDeploy:
     Type: String
     Default: true
@@ -93,13 +97,14 @@ Resources:
         SubnetAZ2Block: !Ref PublicSubnetAZ2
         DefaultRegion: !Ref DefaultRegion
         VpcId: !Ref VPC
-        NomeDoContexto: !Join ['-',[!Ref Prefix, !Ref Contexto, "public"]]
+        NomeDoContexto: !Join ['-',[!Ref Contexto, "public"]]
         MultiZoneDeploy: !Ref MultiZoneDeploy
         IsPublicSubnet: true
         PublicSubnetID: none
         InternetGatewayId: !Ref IGWBase
         Prefix: !Ref Prefix
         UsePrefix: !Ref UsePrefix
+        subnetType: public
       TemplateURL: !Ref SubnetTemplateURL
 
   privateStack:
@@ -113,13 +118,14 @@ Resources:
         SubnetAZ2Block: !Ref PrivateSubnetAZ2
         DefaultRegion: !Ref DefaultRegion
         VpcId: !Ref VPC
-        NomeDoContexto: !Join ['-',[!Ref Prefix, !Ref Contexto, "private"]]
+        NomeDoContexto: !Join ['-',[!Ref Contexto, "private"]]
         MultiZoneDeploy: !Ref MultiZoneDeploy
         IsPublicSubnet: false
-        PublicSubnetID: !Join ['-',[!Ref Prefix, !Ref Contexto, "public", "subnetAZ1"]]
+        PublicSubnetID: !Join ['-',[!Ref Contexto, "public", "subnetAZ1"]]
         InternetGatewayId: !Ref IGWBase
         Prefix: !Ref Prefix
         UsePrefix: !Ref UsePrefix
+        subnetType: private
       TemplateURL: !Ref SubnetTemplateURL
 
   PrivateSG:
@@ -163,6 +169,17 @@ Resources:
           ToPort: 443
           CidrIp: !GetAtt VPC.CidrBlock
       VpcId: !Ref VPC
+
+  EksServiceStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: ['PrivateSG', 'privateStack', 'publicStack', 'TopicNotificationStack']
+    Properties:
+      NotificationARNs:
+      - !Ref TopicNotificationStack
+      Parameters:
+        PrivateSG: !Ref PrivateSG
+        KeyName: !Ref KeyName
+      TemplateURL: !Ref EksTemplateURL
 
 Outputs:
   PrivateSG:

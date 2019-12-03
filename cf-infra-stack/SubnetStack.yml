@@ -26,6 +26,11 @@ Parameters:
     AllowedValues:
     - true
     - false
+  subnetType:
+    Type: String
+    AllowedValues:
+    - private
+    - public
   PublicSubnetID:
     Type: String
   InternetGatewayId:
@@ -63,7 +68,7 @@ Resources:
       - Key: Name
         Value: !If [ CanUsePrefix, !Join ['-',[!Ref Prefix, !Ref "AWS::StackName", !Ref NomeDoContexto, "PrivateAZ1"]], !Join ["", [!Ref "AWS::StackName", !Ref NomeDoContexto, "-PrivateAZ1"]]]
       - Key: Network
-        Value: private
+        Value: !Ref subnetType
       VpcId:
         !Ref VpcId
 
@@ -82,7 +87,7 @@ Resources:
       - Key: Name
         Value: !If [ CanUsePrefix, !Join ['-',[!Ref Prefix, !Ref "AWS::StackName", !Ref NomeDoContexto, "PrivateAZ2"]], !Join ["", [!Ref "AWS::StackName", !Ref NomeDoContexto, "-PrivateAZ2"]]]
       - Key: Network
-        Value: private
+        Value: !Ref subnetType
       VpcId:
         !Ref VpcId
 
@@ -184,12 +189,18 @@ Outputs:
       !Ref subnetAZ2
     Export:
       Name: !Join ['-',[!Ref NomeDoContexto, "subnetAZ2"]]
-  subnetPublic:
+  publicSubnetIdAZ1:
     Condition: CanSetupAsPublicSubnet    
     Value:
       !Ref subnetAZ1
     Export:
-      Name: publicSubnetId
+      Name: publicSubnetIdAZ1
+  publicSubnetIdAZ2:
+    Condition: CanSetupAsPublicSubnet    
+    Value:
+      !Ref subnetAZ2
+    Export:
+      Name: publicSubnetIdAZ2
   RouteTable:
     Value:
       !Ref RouteTable
