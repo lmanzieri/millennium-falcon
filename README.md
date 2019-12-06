@@ -1,5 +1,5 @@
 # millennium-falcon
-Zup challenge
+Challenge
 
 - Criar um cluster de Kubernetes gerenciado, preferencialmente na AWS, podendo utilizar o ambiente de free tier para não gerar custos extras ao candidato.
 
@@ -28,6 +28,7 @@ Sync the git repo to bucket of CF Templates
 
 ` $ aws s3 sync ./cf-infra-stack/ s3://millennium-falcon-s3/ --region us-east-1 `
 
+## Execution Infra Stack
 Deploy CF Stack
 
 ` $ aws cloudformation deploy --region us-east-1 --stack-name millennium-falcon-stack --template-file ./cf-infra-stack/MainStack.yml --capabilities CAPABILITY_NAMED_IAM --parameter-overrides KeyName=$Key`
@@ -35,3 +36,8 @@ Deploy CF Stack
 Delete CF Stack
 
 ` $ aws cloudformation delete-stack --region us-east-1 --stack-name millennium-falcon-stack `
+
+## Execution Build Stack
+Deploy CF Stack
+
+` $ aws cloudformation deploy --region us-east-1 --stack-name millennium-falcon-build-stack --template-file ./cf-pipeline-stack/CodeBuildStack.yml --capabilities CAPABILITY_NAMED_IAM `
